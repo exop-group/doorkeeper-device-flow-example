@@ -74,6 +74,8 @@ GEM
     childprocess (3.0.0)
     concurrent-ruby (1.1.6)
     crass (1.0.6)
+    doorkeeper (5.4.0)
+      railties (>= 5)
     erubi (1.9.0)
     ffi (1.13.1)
     globalid (0.4.2)
@@ -201,6 +203,7 @@ DEPENDENCIES
   bootsnap (>= 1.4.2)
   byebug
   capybara (>= 2.15)
+  doorkeeper (~> 5.4)
   jbuilder (~> 2.7)
   listen (~> 3.2)
   puma (~> 4.1)
