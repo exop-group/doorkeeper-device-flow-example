@@ -3,5 +3,5 @@ Rails.application.routes.draw do
 
   use_doorkeeper
 
-  get 'home/index'
+  root to: 'home#index'
 end
