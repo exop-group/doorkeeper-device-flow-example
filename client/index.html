@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Doorkeeper Device Flow Example Client</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    const CONFIG = {
+      host: 'http://localhost:3000',
+      authorizeDevicePath: '/oauth/authorize_device',
+      tokenPath: '/oauth/token',
+      sampleApiRequestPath: '/me',
+      clientId: '', // <<<<<< PROVIDE YOUR CLIENT ID HERE <<<<<<
+    };
+  </script>
+  <style>
+    body { font-family: sans-serif; }
+    h1 { font-size: 1.4em; }
+    h2 { font-size: 1.1em; }
+    section { margin: 1em 0; padding: 0 1em 1em 1em; border: 1px solid #bbb; background: #f5f5f5; }
+    .hidden { display: none; }
+    pre { overflow: auto; }
+    #user-code-verification, #device-access-token { background-color: #fff; margin: 1em 0; padding: 1em; }
+    #error { border: 1px solid #c25a5a; background-color: #f6e3e3; margin: 1em 0; padding: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Doorkeeper Device Flow Example Client</h1>
+
+  <section>
+    <h2>Device Authentication</h2>
+
+    <button id="perform-device-authorization-request" onclick="performOAuthAuthorizationRequest()">
+      Perform Device Authorization Request
+    </button>
+
+    <div id="user-code-verification" class="hidden">
+      <p>Using a browser on another device, visit:</p>
+      <pre id="verification-uri"></pre>
+      <p>And enter the code:</p>
+      <pre id="user-code"></pre>
+    </div>
+
+    <pre id="device-access-token" class="hidden"></pre>
+
+    <pre id="error" class="hidden"></pre>
+
+    <button id="reset" class="hidden" onclick="reset()">
+      Reset
+    </button>
+  </section>
+
+  <section>
+    <h2>Sample API request (/me)</h2>
+
+    <button id="perform-api-request" onclick="performApiRequest()">
+      Perform API Request
+    </button>
+
+    <pre id="api-response"></pre>
+  </section>
+
+  <script>
+    const hide = (elemId) => document.getElementById(elemId).classList.add('hidden');
+    const show = (elemId) => document.getElementById(elemId).classList.remove('hidden');
+    const setContent = (elemId, content) => document.getElementById(elemId).textContent = content;
+    const jsonPrettify = (value) => JSON.stringify(value, null, 2);
+
+    let pollingInterval = null;
+    let pollingTimeoutId = null;
+    let deviceCode = null;
+    let deviceAccessToken = null;
+
+    async function performOAuthAuthorizationRequest() {
+      hide('perform-device-authorization-request');
+
+      try {
+        const httpResponse = await fetch(`${CONFIG.host}${CONFIG.authorizeDevicePath}`, {
+          method: 'post',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `client_id=${encodeURIComponent(CONFIG.clientId)}`,
+        });
+        const jsonResponse = await httpResponse.json();
+
+        if (httpResponse.status !== 200) {
+          reportError(jsonPrettify(jsonResponse));
+          return;
+        }
+
+        startPolling(jsonResponse.device_code, jsonResponse.interval);
+        setContent('verification-uri', jsonResponse.verification_uri);
+        setContent('user-code', jsonResponse.user_code);
+
+        show('reset');
+        show('user-code-verification');
+      } catch (e) {
+        console.error(e);
+        reportError(`${e.name}\n${e.message}`);
+      }
+    }
+
+    function startPolling(device, interval) {
+      deviceCode = device;
+      pollingInterval = interval * 1000;
+      pollingTimeoutId = setTimeout(pollingCallback, pollingInterval);
+    }
+
+    function stopPolling() {
+      clearTimeout(pollingTimeoutId);
+      pollingTimeoutId = null;
+    }
+
+    async function pollingCallback() {
+      try {
+        const httpResponse = await fetch(`${CONFIG.host}${CONFIG.tokenPath}`, {
+          method: 'post',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          // The grant type is a non-standard alternative to the
+          // official `urn:ietf:params:oauth:grant-type:device_code`
+          body: [
+            `client_id=${encodeURIComponent(CONFIG.clientId)}`,
+            'grant_type=device_code',
+            `device_code=${encodeURIComponent(deviceCode)}`,
+          ].join('&'),
+        });
+        const jsonResponse = await httpResponse.json();
+
+        if (httpResponse.status !== 200) {
+          switch (jsonResponse.error) {
+            case 'authorization_pending':
+              // Just continue with polling requests
+              break;
+            case 'slow_down':
+              // Increase polling interval by 5 seconds,
+              // and continue with polling requests
+              pollingInterval += 5000;
+              break;
+            default: // this also include `access_denied` and `expired_token`
+              reportError(jsonPrettify(jsonResponse))
+              stopPolling();
+              return;
+          }
+
+          // Schedule next request, unless polling was stopped
+          if (pollingTimeoutId !== null) {
+            pollingTimeoutId = setTimeout(pollingCallback, pollingInterval);
+          }
+          return;
+        }
+
+        hide('user-code-verification');
+        deviceAccessToken = jsonResponse;
+        setContent('device-access-token', `Device access token:\n${jsonPrettify(deviceAccessToken)}`)
+        show('device-access-token');
+      } catch (e) {
+        console.error(e);
+        reportError(`${e.name}\n${e.message}`);
+        stopPolling();
+      }
+    }
+
+    async function performApiRequest() {
+      try{
+        setContent('api-response', '');
+
+        const headers = { Accept: 'application/json'};
+
+        if (deviceAccessToken !== null && deviceAccessToken.token_type === 'Bearer') {
+          headers.Authorization = `Bearer ${deviceAccessToken.access_token}`;
+        }
+
+        const httpResponse = await fetch(`${CONFIG.host}${CONFIG.sampleApiRequestPath}`, { headers });
+        const status = `HTTP response status: ${httpResponse.status} ${httpResponse.statusText}`;
+
+        if (httpResponse.status !== 200) {
+          const responseText = await httpResponse.text();
+          setContent('api-response', `${status}\n${responseText}`);
+          return;
+        }
+
+        const jsonResponse = await httpResponse.json();
+        setContent('api-response', `${status}\n${jsonPrettify(jsonResponse)}`);
+      } catch (e) {
+        console.error(e);
+        setContent('api-response', `${e.name}\n${e.message}`);
+      }
+    }
+
+    function reportError(msg) {
+      setContent('error', msg);
+      hide('user-code-verification');
+      show('error');
+      show('reset');
+    }
+
+    function reset() {
+      stopPolling();
+      deviceAccessToken = null;
+      setContent('verification-uri', '');
+      setContent('user-code', '')
+      hide('user-code-verification');
+      hide('device-access-token');
+      hide('error');
+      hide('reset');
+      show('perform-device-authorization-request');
+    }
+  </script>
+</body>
+</html>
