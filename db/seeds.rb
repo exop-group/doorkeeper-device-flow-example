@@ -13,3 +13,9 @@ User.create!(
   password: 'doorkeeper',
   password_confirmation: 'doorkeeper'
 )
+
+Doorkeeper::Application.create!(
+  name: 'My Doorkeeper Application',
+  confidential: false,
+  redirect_uri: 'https://example.com/callback'
+)
