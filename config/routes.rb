@@ -3,6 +3,7 @@ Rails.application.routes.draw do
 
   devise_for :users
   use_doorkeeper
+  use_doorkeeper_device_authorization_grant
 
   root to: 'home#index'
   get 'me', to: 'api#me'
