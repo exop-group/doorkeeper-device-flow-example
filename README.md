@@ -34,6 +34,12 @@ Install all dependencies with:
 bundle install
 ```
 
+and also
+
+```
+yarn install
+```
+
 Then setup the database and load the seed data:
 
 ```
