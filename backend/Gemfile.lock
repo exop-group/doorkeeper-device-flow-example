@@ -85,7 +85,7 @@ GEM
       railties (>= 4.1.0)
       responders
       warden (~> 1.2.3)
-    doorkeeper (5.4.0)
+    doorkeeper (5.5.1)
       railties (>= 5)
     doorkeeper-device_authorization_grant (0.2.0)
       doorkeeper (~> 5.4)
@@ -225,7 +225,7 @@ DEPENDENCIES
   byebug
   capybara (>= 3.26)
   devise (~> 4.8)
-  doorkeeper (~> 5.4)
+  doorkeeper (~> 5.5, >= 5.5.1)
   doorkeeper-device_authorization_grant (~> 0.2.0)
   jbuilder (~> 2.7)
   listen (~> 3.3)
