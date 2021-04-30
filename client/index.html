@@ -115,11 +115,9 @@
         const httpResponse = await fetch(`${CONFIG.host}${CONFIG.tokenPath}`, {
           method: 'post',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          // The grant type is a non-standard alternative to the
-          // official `urn:ietf:params:oauth:grant-type:device_code`
           body: [
             `client_id=${encodeURIComponent(CONFIG.clientId)}`,
-            'grant_type=device_code',
+            'grant_type=urn:ietf:params:oauth:grant-type:device_code',
             `device_code=${encodeURIComponent(deviceCode)}`,
           ].join('&'),
         });
