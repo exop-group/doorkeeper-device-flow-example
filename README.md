@@ -26,7 +26,7 @@ Move to the Rails server directory:
 cd doorkeeper-device-flow-example/backend
 ```
 
-This Rails app was developed and tested using Ruby 2.7.1, but it _should_ run with some older versions.
+This Rails app was developed and tested using Ruby 3.0.1, but it _should_ run with some older versions.
 
 Install all dependencies with:
 

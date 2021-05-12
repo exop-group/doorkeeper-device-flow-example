@@ -7,4 +7,4 @@ test:
 production:
   adapter: redis
   url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
-  channel_prefix: doorkeeper_device_authorization_grant_demo_app_production
+  channel_prefix: doorkeeper_device_flow_example_production
